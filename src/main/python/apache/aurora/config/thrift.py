@@ -14,8 +14,9 @@
 
 import getpass
 import re
+import json
 
-from pystachio import Empty, Ref
+from pystachio import Empty, Ref, Map, String
 from twitter.common.lang import Compatibility
 
 from apache.aurora.config.schema.base import AppcImage as PystachioAppcImage
@@ -91,15 +92,17 @@ def constraints_to_thrift(constraints):
   return result
 
 
-def task_instance_from_job(job, instance, hostname):
+def task_instance_from_job(job, instance, hostname, thrift_metadata):
   instance_context = MesosContext(instance=instance, hostname=hostname)
   health_check_config = HealthCheckConfig()
   if job.has_health_check_config():
     health_check_config = job.health_check_config()
+  metadata = Map(String,String)({i.key: i.value for i in thrift_metadata})
   ti = MesosTaskInstance(task=job.task(),
                          role=job.role(),
                          health_check_config=health_check_config,
-                         instance=instance)
+                         instance=instance,
+                         metadata=metadata)
   if job.has_announce():
     ti = ti(announce=job.announce())
   if job.has_environment():

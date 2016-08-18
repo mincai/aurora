@@ -22,6 +22,7 @@ import subprocess
 import sys
 import threading
 import time
+import json
 
 from mesos.interface import mesos_pb2
 from twitter.common import log
@@ -78,7 +79,8 @@ class ThermosTaskRunner(TaskRunner):
                rotate_log_size_mb=None,
                rotate_log_backups=None,
                preserve_env=False,
-               mesos_containerizer_path=None):
+               mesos_containerizer_path=None,
+               task_metadata=None):
     """
       runner_pex       location of the thermos_runner pex that this task runner should use
       task_id          task_id assigned by scheduler
@@ -92,6 +94,7 @@ class ThermosTaskRunner(TaskRunner):
       preserve_env
       mesos_containerizer_path path to the mesos-containerizer executable used to isolate a task's
                                filesystem.
+      task_metadata    task metadata
     """
     self._runner_pex = runner_pex
     self._task_id = task_id
@@ -114,6 +117,7 @@ class ThermosTaskRunner(TaskRunner):
     self._rotate_log_size_mb = rotate_log_size_mb
     self._rotate_log_backups = rotate_log_backups
     self._mesos_containerizer_path = mesos_containerizer_path
+    self._task_metadata = task_metadata
 
     # wait events
     self._dead = threading.Event()
@@ -125,6 +129,9 @@ class ThermosTaskRunner(TaskRunner):
       with open(os.path.join(self._artifact_dir, 'task.json'), 'w') as fp:
         self._task_filename = fp.name
         ThermosTaskWrapper(self._task).to_file(self._task_filename)
+
+      with open(os.path.join(self._artifact_dir, 'metadata.json'), 'w') as fp:
+        json.dump(task_metadata.get(), fp)
     except ThermosTaskWrapper.InvalidTask as e:
       raise TaskError('Failed to load task: %s' % e)
 
@@ -374,7 +381,8 @@ class DefaultThermosTaskRunnerProvider(TaskRunnerProvider):
                process_logger_mode=None,
                rotate_log_size_mb=None,
                rotate_log_backups=None,
-               mesos_containerizer_path=None):
+               mesos_containerizer_path=None,
+               task_metadata=None):
     self._artifact_dir = artifact_dir or safe_mkdtemp()
     self._checkpoint_root = checkpoint_root
     self._preserve_env = preserve_env
@@ -389,6 +397,7 @@ class DefaultThermosTaskRunnerProvider(TaskRunnerProvider):
     self._rotate_log_size_mb = rotate_log_size_mb
     self._rotate_log_backups = rotate_log_backups
     self._mesos_containerizer_path = mesos_containerizer_path
+    self._task_metadata = task_metadata
 
   def _get_role(self, assigned_task):
     return None if assigned_task.task.container.docker else assigned_task.task.job.role
@@ -427,7 +436,8 @@ class DefaultThermosTaskRunnerProvider(TaskRunnerProvider):
         rotate_log_size_mb=self._rotate_log_size_mb,
         rotate_log_backups=self._rotate_log_backups,
         preserve_env=self._preserve_env,
-        mesos_containerizer_path=self._mesos_containerizer_path)
+        mesos_containerizer_path=self._mesos_containerizer_path,
+        task_metadata=mesos_task.metadata())
 
     return HttpLifecycleManager.wrap(runner, mesos_task, mesos_ports)
 

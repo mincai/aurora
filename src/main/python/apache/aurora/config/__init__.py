@@ -164,7 +164,7 @@ class AuroraConfig(object):
   def __init__(self, job):
     self.validate_job(job)  # first-pass validation that required fields are present
     self._job = self.standard_bindings(job)
-    self._metadata = []
+    self._metadata = [(key, value) for key, value in self._job.metadata().get().items()]
     self.binding_dicts = defaultdict(dict)
     self.hooks = []
 

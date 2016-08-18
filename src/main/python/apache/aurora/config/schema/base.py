@@ -101,6 +101,9 @@ class Announcer(Struct):
   zk_path      = String
 
 
+DefaultMetadata = Map(String, String)({})
+
+
 # The executorConfig populated inside of TaskConfig.
 class MesosTaskInstance(Struct):
   task                = Required(Task)
@@ -110,6 +113,7 @@ class MesosTaskInstance(Struct):
   environment         = Required(String)
   health_check_config = Default(HealthCheckConfig, HealthCheckConfig())
   lifecycle           = LifecycleConfig
+  metadata            = Default(Map(String, String), DefaultMetadata)
 
 
 class Parameter(Struct):
@@ -172,6 +176,8 @@ class MesosJob(Struct):
   # specify the value of the container property to be a `Docker` container directly.
   container = Choice([Container, Docker, Mesos])
 
+  # Job metadata which can be accessed by Thermos Process in metadata.json
+  metadata  = Default(Map(String, String), DefaultMetadata)
 
 Job = MesosJob
 Service = Job(service = True)

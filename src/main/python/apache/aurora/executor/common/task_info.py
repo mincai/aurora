@@ -77,7 +77,8 @@ def mesos_task_instance_from_assigned_task(assigned_task):
   task_instance = task_instance_from_job(
       MesosJob.json_loads(thermos_task),
       assigned_task.instanceId,
-      assigned_task.slaveHost)
+      assigned_task.slaveHost,
+      assigned_task.task.metadata)
 
   try:
     ThermosTaskValidator.assert_valid_task(task_instance.task())
